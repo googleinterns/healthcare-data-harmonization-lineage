@@ -23,6 +23,7 @@ import (
 	mappb "github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_engine/proto"
 	fileutil "github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_engine/util/ioutil"
 	"github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_language/transpiler"
+	"github.com/googleinterns/healthcare-data-harmonization-lineage/graph"
 )
 
 var (
@@ -44,5 +45,9 @@ func main() {
 		log.Fatalf("Transpiling whistle failed. %v", err)
 	}
 
-	fmt.Println(mpc.RootMapping)
+	g, err := graph.New(mpc)
+	if err != nil {
+		log.Fatalf("Graph construction failed with error;\n\t%v", err)
+	}
+	fmt.Println(g)
 }
