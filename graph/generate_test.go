@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"fmt"
 	"testing"
 
 	mbp "github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_engine/proto"
@@ -16,66 +17,267 @@ func (id mockIDfactory) New() IsID {
 	return intID(id)
 }
 
-func TestNew_Whistle(t *testing.T) {
-	setIDfactory(&autoIncFactory{currentID: 0})
+// TODO: in the conditionals refactor, this is replaced with helper functions for creating nodes in-place
+// a map of convenient nodes
+func getNodeMap() map[string]Node {
+	msgMap := getMsgMap()
+	return map[string]Node{
+		"targetX": &TargetNode{
+			id:   idFactory.New(),
+			Name: "x",
+			msg: &mbp.FieldMapping{
+				Target: &mbp.FieldMapping_TargetField{
+					TargetField: "x",
+				},
+			},
+		},
+		"targetY": &TargetNode{
+			id:   idFactory.New(),
+			Name: "y",
+			msg: &mbp.FieldMapping{
+				Target: &mbp.FieldMapping_TargetField{
+					TargetField: "y",
+				},
+			},
+		},
+		"targetZ": &TargetNode{
+			id:   idFactory.New(),
+			Name: "z",
+			msg: &mbp.FieldMapping{
+				Target: &mbp.FieldMapping_TargetField{
+					TargetField: "z",
+				},
+			},
+		},
+		"bool": &ConstBoolNode{
+			id:    idFactory.New(),
+			Value: true,
+			msg:   msgMap["bool"],
+		},
+		"float": &ConstFloatNode{
+			id:    idFactory.New(),
+			Value: 5.0,
+			msg:   msgMap["float"],
+		},
+		"string": &ConstStringNode{
+			id:    idFactory.New(),
+			Value: "foo",
+			msg:   msgMap["string"],
+		},
+		"int": &ConstIntNode{
+			id:    idFactory.New(),
+			Value: 0,
+			msg:   msgMap["int"],
+		},
+		"proj1": &ProjectorNode{
+			id:   idFactory.New(),
+			Name: "proj1",
+			msg:  msgMap["proj1"],
+		},
+		"proj2": &ProjectorNode{
+			id:   idFactory.New(),
+			Name: "proj2",
+			msg: &mbp.ProjectorDefinition{
+				Name: "proj2",
+			},
+		},
+		"proj_empty": &ProjectorNode{
+			id:   idFactory.New(),
+			Name: "proj_empty",
+			msg:  msgMap["proj_empty"],
+		},
+		"arg0": &ArgumentNode{
+			id:    idFactory.New(),
+			Index: 1,
+			msg:   msgMap["arg0"],
+		},
+		"arg1": &ArgumentNode{
+			id:    idFactory.New(),
+			Index: 2,
+			msg:   msgMap["arg1"],
+		},
+	}
+}
 
-	nodeList := [][]Node{
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ConstBoolNode{
-				id:    idFactory.New(),
-				Value: true,
+// a map of convenient proto messages
+func getMsgMap() map[string]proto.Message {
+	boolMsg := &mbp.ValueSource{
+		Source: &mbp.ValueSource_ConstBool{
+			ConstBool: true,
+		},
+	}
+	intMsg := &mbp.ValueSource{
+		Source: &mbp.ValueSource_ConstInt{
+			ConstInt: 0,
+		},
+	}
+	source_noargs := &mbp.ValueSource{
+		Projector: "proj1",
+	}
+	source_args := &mbp.ValueSource{
+		Projector: "proj1",
+		Source: &mbp.ValueSource_ConstBool{
+			ConstBool: true,
+		},
+		AdditionalArg: []*mbp.ValueSource{intMsg},
+	}
+	targetX := &mbp.FieldMapping_TargetField{
+		TargetField: "x",
+	}
+	targetY := &mbp.FieldMapping_TargetField{
+		TargetField: "y",
+	}
+	mapping := &mbp.FieldMapping{
+		Target:      targetX,
+		ValueSource: boolMsg,
+	}
+	mapping2 := &mbp.FieldMapping{
+		Target:      targetY,
+		ValueSource: boolMsg,
+	}
+	mapping_proj1 := &mbp.FieldMapping{
+		Target:      targetX,
+		ValueSource: source_noargs,
+	}
+	mapping_proj2 := &mbp.FieldMapping{
+		Target:      targetX,
+		ValueSource: source_args,
+	}
+	mapping_nil := &mbp.FieldMapping{}
+	arg0 := &mbp.ValueSource{
+		Source: &mbp.ValueSource_FromInput{
+			FromInput: &mbp.ValueSource_InputSource{
+				Arg: 1,
 			},
 		},
-		[]Node{},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ProjectorNode{
-				id:   idFactory.New(),
-				Name: "projector",
-			},
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "y",
-			},
-			&ConstFloatNode{
-				id:    idFactory.New(),
-				Value: 5,
+	}
+	proj1 := &mbp.ProjectorDefinition{
+		Name:    "proj1",
+		Mapping: []*mbp.FieldMapping{mapping},
+	}
+	proj_empty := &mbp.ProjectorDefinition{
+		Name:    "proj_empty",
+		Mapping: []*mbp.FieldMapping{},
+	}
+	arg1 := &mbp.ValueSource{
+		Source: &mbp.ValueSource_FromInput{
+			FromInput: &mbp.ValueSource_InputSource{
+				Arg: 2,
 			},
 		},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ProjectorNode{
-				id:   idFactory.New(),
-				Name: "projector",
-			},
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "y",
-			},
-			&ArgumentNode{
-				id:    idFactory.New(),
-				Index: 1,
-				Field: ".x",
-			},
+	}
+	projectedVal := &mbp.ValueSource{
+		Source: &mbp.ValueSource_ProjectedValue{
+			ProjectedValue: boolMsg,
 		},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
+	}
+	projVal2 := &mbp.ValueSource{
+		Source: &mbp.ValueSource_ProjectedValue{
+			ProjectedValue: &mbp.ValueSource{
+				Projector: "proj_empty",
 			},
 		},
 	}
 
+	return map[string]proto.Message{
+		"bool": boolMsg,
+		"float": &mbp.ValueSource{
+			Source: &mbp.ValueSource_ConstFloat{
+				ConstFloat: 5.0,
+			},
+		},
+		"string": &mbp.ValueSource{
+			Source: &mbp.ValueSource_ConstString{
+				ConstString: "foo",
+			},
+		},
+		"int":           intMsg,
+		"source_noargs": source_noargs,
+		"source_args":   source_args,
+		"projectedVal":  projectedVal,
+		"projVal2":      projVal2,
+		"mapping":       mapping,
+		"mapping2":      mapping2,
+		"mapping_proj1": mapping_proj1,
+		"mapping_proj2": mapping_proj2,
+		"mapping_nil":   mapping_nil,
+		"proj1":         proj1,
+		"proj_empty":    proj_empty,
+		"arg0":          arg0,
+		"arg1":          arg1,
+	}
+}
+
+func compareGraphs(g, h map[IsID][]IsID, gNodes map[IsID]Node, hNodes map[IsID]Node) (bool, string) {
+	for gID, gAncestorIDs := range g {
+		gNode := gNodes[gID]
+		hNode, ok := findNodeInMap(gNode, hNodes)
+		if !ok {
+			return false, fmt.Sprintf("expected node %v to be in the graph %v", gNode, h)
+		}
+		hAncestorIDs := h[hNode.ID()]
+		if len(gAncestorIDs) != len(hAncestorIDs) {
+			return false, fmt.Sprintf("node %v wanted %v ancestors, but has %v", gNode, len(gAncestorIDs), len(hAncestorIDs))
+		}
+
+		for _, gAncestorID := range gAncestorIDs {
+			gAncestor := gNodes[gAncestorID]
+			hAncestors := make([]Node, len(hAncestorIDs))
+			for i, hAncestorID := range hAncestorIDs {
+				hAncestors[i] = hNodes[hAncestorID]
+			}
+			if _, found := findNodeInSlice(gAncestor, hAncestors); !found {
+				return false, fmt.Sprintf("expected node %v to be an ancestor of %v, but it was not", gAncestor, gNode)
+			}
+		}
+	}
+	return true, ""
+}
+
+func findNodeInSlice(targetNode Node, nodes []Node) (Node, bool) {
+	for _, node := range nodes {
+		if EqualsIgnoreID(targetNode, node) {
+			return node, true
+		}
+	}
+	return nil, false
+}
+
+func findNodeInMap(targetNode Node, nodes map[IsID]Node) (Node, bool) {
+	for _, node := range nodes {
+		if EqualsIgnoreID(targetNode, node) {
+			return node, true
+		}
+	}
+	return nil, false
+}
+
+func EqualsIgnoreID(n1 Node, n2 Node) bool {
+	n1ID := n1.ID()
+	n2ID := n2.ID()
+
+	msg1 := n1.protoMsg()
+	msg2 := n2.protoMsg()
+
+	n1.setID(intID(0))
+	n2.setID(intID(0))
+
+	n1.setProtoMsg(nil)
+	n2.setProtoMsg(nil)
+
+	areEqual := n1.Equals(n2)
+
+	n1.setID(n1ID)
+	n2.setID(n2ID)
+
+	n1.setProtoMsg(msg1)
+	n2.setProtoMsg(msg2)
+
+	return areEqual
+}
+
+func TestNew_Whistle(t *testing.T) {
+	nodeMap := getNodeMap()
 	tests := []struct {
 		name       string
 		whistle    string
@@ -86,13 +288,14 @@ func TestNew_Whistle(t *testing.T) {
 			name:    "test constant mapping",
 			whistle: "x: true",
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[0][0].ID(): []IsID{nodeList[0][1].ID()},
-					nodeList[0][1].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["bool"].ID()},
+					nodeMap["bool"].ID():    []IsID{},
 				},
+				ArgumentEdges: map[IsID][]IsID{},
 				Nodes: map[IsID]Node{
-					nodeList[0][0].ID(): nodeList[0][0],
-					nodeList[0][1].ID(): nodeList[0][1],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["bool"].ID():    nodeMap["bool"],
 				},
 			},
 			wantErrors: false,
@@ -106,23 +309,26 @@ func TestNew_Whistle(t *testing.T) {
 		{
 			name: "test projector",
 			whistle: `
-			x: projector()
-			def projector() {
-				y: 5
+			x: proj1()
+			def proj1() {
+				y: 5.0
 			}
 			`,
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[2][0].ID(): []IsID{nodeList[2][1].ID()},
-					nodeList[2][1].ID(): []IsID{nodeList[2][2].ID()},
-					nodeList[2][2].ID(): []IsID{nodeList[2][3].ID()},
-					nodeList[2][3].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["proj1"].ID()},
+					nodeMap["proj1"].ID():   []IsID{nodeMap["targetY"].ID()},
+					nodeMap["targetY"].ID(): []IsID{nodeMap["float"].ID()},
+					nodeMap["float"].ID():   []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
 				},
 				Nodes: map[IsID]Node{
-					nodeList[2][0].ID(): nodeList[2][0],
-					nodeList[2][1].ID(): nodeList[2][1],
-					nodeList[2][2].ID(): nodeList[2][2],
-					nodeList[2][3].ID(): nodeList[2][3],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["proj1"].ID():   nodeMap["proj1"],
+					nodeMap["targetY"].ID(): nodeMap["targetY"],
+					nodeMap["float"].ID():   nodeMap["float"],
 				},
 			},
 			wantErrors: false,
@@ -130,30 +336,101 @@ func TestNew_Whistle(t *testing.T) {
 		{
 			name: "test projector arguments",
 			whistle: `
-			x: projector(true, 1.0)
-			def projector(arg1, arg2) {
-				y: arg1.x
+			x: proj1(true, 5.0)
+			def proj1(arg1, arg2) {
+				y: arg1
 			}
 			`,
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[3][0].ID(): []IsID{nodeList[3][1].ID()},
-					nodeList[3][1].ID(): []IsID{nodeList[3][2].ID()},
-					nodeList[3][2].ID(): []IsID{nodeList[3][3].ID()},
-					nodeList[3][3].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["proj1"].ID()},
+					nodeMap["proj1"].ID():   []IsID{nodeMap["targetY"].ID()},
+					nodeMap["targetY"].ID(): []IsID{nodeMap["arg0"].ID()},
+					nodeMap["arg0"].ID():    []IsID{nodeMap["bool"].ID()},
+					nodeMap["bool"].ID():    []IsID{},
+					nodeMap["float"].ID():   []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{nodeMap["bool"].ID(), nodeMap["float"].ID()},
 				},
 				Nodes: map[IsID]Node{
-					nodeList[3][0].ID(): nodeList[3][0],
-					nodeList[3][1].ID(): nodeList[3][1],
-					nodeList[3][2].ID(): nodeList[3][2],
-					nodeList[3][3].ID(): nodeList[3][3],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["proj1"].ID():   nodeMap["proj1"],
+					nodeMap["targetY"].ID(): nodeMap["targetY"],
+					nodeMap["arg0"].ID():    nodeMap["arg0"],
+					nodeMap["bool"].ID():    nodeMap["bool"],
+					nodeMap["float"].ID():   nodeMap["float"],
 				},
 			},
 			wantErrors: false,
 		},
+		{
+			name: "test nested projectors",
+			whistle: `
+			x: proj1(proj2())
+
+                        def proj2() {
+                                z: "foo"
+                        }
+
+			def proj1(arg1) {
+				y: arg1
+			}
+			`,
+			want: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["proj1"].ID()},
+					nodeMap["proj1"].ID():   []IsID{nodeMap["targetY"].ID()},
+					nodeMap["targetY"].ID(): []IsID{nodeMap["arg0"].ID()},
+					nodeMap["arg0"].ID():    []IsID{nodeMap["proj2"].ID()},
+					nodeMap["proj2"].ID():   []IsID{nodeMap["targetZ"].ID()},
+					nodeMap["targetZ"].ID(): []IsID{nodeMap["string"].ID()},
+					nodeMap["string"].ID():  []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{nodeMap["proj2"].ID()},
+					nodeMap["proj2"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["proj1"].ID():   nodeMap["proj1"],
+					nodeMap["targetY"].ID(): nodeMap["targetY"],
+					nodeMap["arg0"].ID():    nodeMap["arg0"],
+					nodeMap["proj2"].ID():   nodeMap["proj2"],
+					nodeMap["targetZ"].ID(): nodeMap["targetZ"],
+					nodeMap["string"].ID():  nodeMap["string"],
+				},
+			},
+			wantErrors: false,
+		},
+		{
+			name: "test recursion simple",
+			whistle: `
+			x: proj1()
+
+			def proj1() {
+				z: proj1()
+			}
+			`,
+			wantErrors: true,
+		},
+		{
+			name: "test cycle",
+			whistle: `
+			x: foo()
+			
+			def foo() {
+				y: bar()
+			}
+
+			def bar() {
+				z: foo()
+			}
+			`,
+			wantErrors: true,
+		},
 	}
 
-	setIDfactory(&autoIncFactory{currentID: 0})
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			mpc, err := transpiler.Transpile(test.whistle)
@@ -171,22 +448,16 @@ func TestNew_Whistle(t *testing.T) {
 				if len(test.want.Nodes) != len(g.Nodes) {
 					t.Errorf("expected %v nodes, but got %v; %v", len(test.want.Nodes), len(g.Nodes), g.Nodes)
 				}
-
-				for wantID, wantNode := range test.want.Nodes {
-					node, ok := g.Nodes[wantID]
-					if !ok {
-						t.Errorf("expected node %v to be in the graph. got %v", wantNode, g.Nodes)
+				for _, wantNode := range test.want.Nodes {
+					if _, found := findNodeInMap(wantNode, g.Nodes); !found {
+						t.Errorf("expected node {%v} to be in the graph, but it was not", wantNode)
 					}
-					if !node.Equals(wantNode) {
-						t.Errorf("expected node %v but got %v", wantNode, node)
-					}
-					for _, wantAncestorID := range test.want.Graph[wantID] {
-						wantAncestor := test.want.Nodes[wantAncestorID]
-						ancestor := g.Nodes[wantAncestorID]
-						if !wantAncestor.Equals(ancestor) {
-							t.Errorf("expected ancestor %v but got %v", wantAncestor, ancestor)
-						}
-					}
+				}
+				if equal, errStr := compareGraphs(test.want.Edges, g.Edges, test.want.Nodes, g.Nodes); !equal {
+					t.Errorf("the graph edges are not as expected:\n%v", errStr)
+				}
+				if equal, errStr := compareGraphs(test.want.ArgumentEdges, g.ArgumentEdges, test.want.Nodes, g.Nodes); !equal {
+					t.Errorf("the graph argument edges are not as expected:\n%v", errStr)
 				}
 			}
 		},
@@ -194,66 +465,8 @@ func TestNew_Whistle(t *testing.T) {
 	}
 }
 
-func TestNew_Whistler(t *testing.T) {
-	setIDfactory(&autoIncFactory{currentID: 0})
-
-	nodeList := [][]Node{
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ConstBoolNode{
-				id:    idFactory.New(),
-				Value: true,
-			},
-		},
-		[]Node{},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ProjectorNode{
-				id:   idFactory.New(),
-				Name: "projector",
-			},
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "y",
-			},
-			&ConstIntNode{
-				id:    idFactory.New(),
-				Value: 5,
-			},
-		},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ProjectorNode{
-				id:   idFactory.New(),
-				Name: "projector",
-			},
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "y",
-			},
-			&ArgumentNode{
-				id:    idFactory.New(),
-				Index: 1,
-				Field: ".x",
-			},
-		},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-		},
-	}
-
+func TestNew_WhistlerProto(t *testing.T) {
+	nodeMap := getNodeMap()
 	tests := []struct {
 		name       string
 		mpc        *mbp.MappingConfig
@@ -278,13 +491,14 @@ func TestNew_Whistler(t *testing.T) {
 				},
 			},
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[0][0].ID(): []IsID{nodeList[0][1].ID()},
-					nodeList[0][1].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["bool"].ID()},
+					nodeMap["bool"].ID():    []IsID{},
 				},
+				ArgumentEdges: map[IsID][]IsID{},
 				Nodes: map[IsID]Node{
-					nodeList[0][0].ID(): nodeList[0][0],
-					nodeList[0][1].ID(): nodeList[0][1],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["bool"].ID():    nodeMap["bool"],
 				},
 			},
 			wantErrors: false,
@@ -303,7 +517,7 @@ func TestNew_Whistler(t *testing.T) {
 				RootMapping: []*mbp.FieldMapping{
 					&mbp.FieldMapping{
 						ValueSource: &mbp.ValueSource{
-							Projector: "projector",
+							Projector: "proj1",
 						},
 						Target: &mbp.FieldMapping_TargetField{
 							TargetField: "x",
@@ -312,12 +526,12 @@ func TestNew_Whistler(t *testing.T) {
 				},
 				Projector: []*mbp.ProjectorDefinition{
 					&mbp.ProjectorDefinition{
-						Name: "projector",
+						Name: "proj1",
 						Mapping: []*mbp.FieldMapping{
 							&mbp.FieldMapping{
 								ValueSource: &mbp.ValueSource{
 									Source: &mbp.ValueSource_ConstInt{
-										ConstInt: 5,
+										ConstInt: 0,
 									},
 								},
 								Target: &mbp.FieldMapping_TargetField{
@@ -329,17 +543,20 @@ func TestNew_Whistler(t *testing.T) {
 				},
 			},
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[2][0].ID(): []IsID{nodeList[2][1].ID()},
-					nodeList[2][1].ID(): []IsID{nodeList[2][2].ID()},
-					nodeList[2][2].ID(): []IsID{nodeList[2][3].ID()},
-					nodeList[2][3].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["proj1"].ID()},
+					nodeMap["proj1"].ID():   []IsID{nodeMap["targetY"].ID()},
+					nodeMap["targetY"].ID(): []IsID{nodeMap["int"].ID()},
+					nodeMap["int"].ID():     []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
 				},
 				Nodes: map[IsID]Node{
-					nodeList[2][0].ID(): nodeList[2][0],
-					nodeList[2][1].ID(): nodeList[2][1],
-					nodeList[2][2].ID(): nodeList[2][2],
-					nodeList[2][3].ID(): nodeList[2][3],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["proj1"].ID():   nodeMap["proj1"],
+					nodeMap["targetY"].ID(): nodeMap["targetY"],
+					nodeMap["int"].ID():     nodeMap["int"],
 				},
 			},
 			wantErrors: false,
@@ -356,11 +573,11 @@ func TestNew_Whistler(t *testing.T) {
 							AdditionalArg: []*mbp.ValueSource{
 								&mbp.ValueSource{
 									Source: &mbp.ValueSource_ConstFloat{
-										ConstFloat: 1.0,
+										ConstFloat: 5.0,
 									},
 								},
 							},
-							Projector: "projector",
+							Projector: "proj1",
 						},
 						Target: &mbp.FieldMapping_TargetField{
 							TargetField: "x",
@@ -369,14 +586,13 @@ func TestNew_Whistler(t *testing.T) {
 				},
 				Projector: []*mbp.ProjectorDefinition{
 					&mbp.ProjectorDefinition{
-						Name: "projector",
+						Name: "proj1",
 						Mapping: []*mbp.FieldMapping{
 							&mbp.FieldMapping{
 								ValueSource: &mbp.ValueSource{
 									Source: &mbp.ValueSource_FromInput{
 										FromInput: &mbp.ValueSource_InputSource{
-											Arg:   1,
-											Field: ".x",
+											Arg: 1,
 										},
 									},
 								},
@@ -389,17 +605,24 @@ func TestNew_Whistler(t *testing.T) {
 				},
 			},
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[3][0].ID(): []IsID{nodeList[3][1].ID()},
-					nodeList[3][1].ID(): []IsID{nodeList[3][2].ID()},
-					nodeList[3][2].ID(): []IsID{nodeList[3][3].ID()},
-					nodeList[3][3].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["proj1"].ID()},
+					nodeMap["proj1"].ID():   []IsID{nodeMap["targetY"].ID()},
+					nodeMap["targetY"].ID(): []IsID{nodeMap["arg0"].ID()},
+					nodeMap["arg0"].ID():    []IsID{nodeMap["bool"].ID()},
+					nodeMap["bool"].ID():    []IsID{},
+					nodeMap["float"].ID():   []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{nodeMap["bool"].ID(), nodeMap["float"].ID()},
 				},
 				Nodes: map[IsID]Node{
-					nodeList[3][0].ID(): nodeList[3][0],
-					nodeList[3][1].ID(): nodeList[3][1],
-					nodeList[3][2].ID(): nodeList[3][2],
-					nodeList[3][3].ID(): nodeList[3][3],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["proj1"].ID():   nodeMap["proj1"],
+					nodeMap["targetY"].ID(): nodeMap["targetY"],
+					nodeMap["arg0"].ID():    nodeMap["arg0"],
+					nodeMap["bool"].ID():    nodeMap["bool"],
+					nodeMap["float"].ID():   nodeMap["float"],
 				},
 			},
 			wantErrors: false,
@@ -421,9 +644,117 @@ func TestNew_Whistler(t *testing.T) {
 			},
 			wantErrors: true,
 		},
+		{
+			name: "test nested projectors",
+			mpc: &mbp.MappingConfig{
+				RootMapping: []*mbp.FieldMapping{
+					&mbp.FieldMapping{
+						ValueSource: &mbp.ValueSource{
+							Source: &mbp.ValueSource_ProjectedValue{
+								ProjectedValue: &mbp.ValueSource{
+									Projector: "proj2",
+								},
+							},
+							Projector: "proj1",
+						},
+						Target: &mbp.FieldMapping_TargetField{
+							TargetField: "x",
+						},
+					},
+				},
+				Projector: []*mbp.ProjectorDefinition{
+					&mbp.ProjectorDefinition{
+						Name: "proj1",
+						Mapping: []*mbp.FieldMapping{
+							&mbp.FieldMapping{
+								ValueSource: &mbp.ValueSource{
+									Source: &mbp.ValueSource_FromInput{
+										FromInput: &mbp.ValueSource_InputSource{
+											Arg: 1,
+										},
+									},
+								},
+								Target: &mbp.FieldMapping_TargetField{
+									TargetField: "y",
+								},
+							},
+						},
+					},
+					&mbp.ProjectorDefinition{
+						Name: "proj2",
+						Mapping: []*mbp.FieldMapping{
+							&mbp.FieldMapping{
+								ValueSource: &mbp.ValueSource{
+									Source: &mbp.ValueSource_ConstString{
+										ConstString: "foo",
+									},
+								},
+								Target: &mbp.FieldMapping_TargetField{
+									TargetField: "z",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["proj1"].ID()},
+					nodeMap["proj1"].ID():   []IsID{nodeMap["targetY"].ID()},
+					nodeMap["targetY"].ID(): []IsID{nodeMap["arg0"].ID()},
+					nodeMap["arg0"].ID():    []IsID{nodeMap["proj2"].ID()},
+					nodeMap["proj2"].ID():   []IsID{nodeMap["targetZ"].ID()},
+					nodeMap["targetZ"].ID(): []IsID{nodeMap["string"].ID()},
+					nodeMap["string"].ID():  []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{nodeMap["proj2"].ID()},
+					nodeMap["proj2"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["proj1"].ID():   nodeMap["proj1"],
+					nodeMap["targetY"].ID(): nodeMap["targetY"],
+					nodeMap["arg0"].ID():    nodeMap["arg0"],
+					nodeMap["proj2"].ID():   nodeMap["proj2"],
+					nodeMap["targetZ"].ID(): nodeMap["targetZ"],
+					nodeMap["string"].ID():  nodeMap["string"],
+				},
+			},
+			wantErrors: false,
+		},
+		{
+			name: "test recursive projector",
+			mpc: &mbp.MappingConfig{
+				RootMapping: []*mbp.FieldMapping{
+					&mbp.FieldMapping{
+						ValueSource: &mbp.ValueSource{
+							Projector: "proj1",
+						},
+						Target: &mbp.FieldMapping_TargetField{
+							TargetField: "x",
+						},
+					},
+				},
+				Projector: []*mbp.ProjectorDefinition{
+					&mbp.ProjectorDefinition{
+						Name: "proj1",
+						Mapping: []*mbp.FieldMapping{
+							&mbp.FieldMapping{
+								ValueSource: &mbp.ValueSource{
+									Projector: "proj1",
+								},
+								Target: &mbp.FieldMapping_TargetField{
+									TargetField: "y",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErrors: true,
+		},
 	}
-
-	setIDfactory(&autoIncFactory{currentID: 0})
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g, err := New(test.mpc)
@@ -437,21 +768,206 @@ func TestNew_Whistler(t *testing.T) {
 				if len(test.want.Nodes) != len(g.Nodes) {
 					t.Errorf("expected %v nodes, but got %v; %v", len(test.want.Nodes), len(g.Nodes), g.Nodes)
 				}
+				for _, wantNode := range test.want.Nodes {
+					if _, found := findNodeInMap(wantNode, g.Nodes); !found {
+						t.Errorf("expected node {%v} to be in the graph, but it was not", wantNode)
+					}
+				}
+				if equal, errStr := compareGraphs(test.want.Edges, g.Edges, test.want.Nodes, g.Nodes); !equal {
+					t.Errorf("the graph edges are not as expected:\n%v", errStr)
+				}
+				if equal, errStr := compareGraphs(test.want.ArgumentEdges, g.ArgumentEdges, test.want.Nodes, g.Nodes); !equal {
+					t.Errorf("the graph argument edges are not as expected:\n%v", errStr)
+				}
+			}
+		},
+		)
+	}
+}
 
-				for wantID, wantNode := range test.want.Nodes {
-					node, ok := g.Nodes[wantID]
-					if !ok {
-						t.Errorf("expected node %v to be in the graph. got %v", wantNode, g.Nodes)
+func TestGetProjectedValue(t *testing.T) {
+	msgMap := getMsgMap()
+	tests := []struct {
+		name        string
+		msg         proto.Message
+		want        *mbp.ValueSource
+		wantSuccess bool
+	}{
+		{
+			name:        "test projected value",
+			msg:         msgMap["projectedVal"],
+			want:        msgMap["bool"].(*mbp.ValueSource),
+			wantSuccess: true,
+		},
+		{
+			name:        "test wrong value source",
+			msg:         msgMap["bool"],
+			wantSuccess: false,
+		},
+		{
+			name:        "test wrong msg",
+			msg:         msgMap["mapping"],
+			wantSuccess: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			msg, ok := getProjectedValue(test.msg)
+			if !test.wantSuccess && ok {
+				t.Errorf("expected failure getting projected value from msg {%v}", test.msg)
+			} else if test.wantSuccess && !ok {
+				t.Errorf("getting projected value for msg {%v} failed", test.msg)
+			}
+
+			if test.wantSuccess {
+				if !cmp.Equal(test.want, msg, protocmp.Transform()) {
+					t.Errorf("expected msg %v, but got %v", test.want, msg)
+				}
+			}
+		},
+		)
+	}
+}
+
+func TestAddArgLineages(t *testing.T) {
+	nodeMap := getNodeMap()
+	msgMap := getMsgMap()
+	tests := []struct {
+		name       string
+		e          *env
+		graph      Graph
+		argMsgs    []proto.Message
+		projNode   Node
+		projMsg    *mbp.ProjectorDefinition
+		projectors map[string]*mbp.ProjectorDefinition
+		want       *env
+		wantErrors bool
+	}{
+		{
+			name: "add argument",
+			e: &env{
+				name: "root",
+			},
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["proj1"].ID(): nodeMap["proj1"],
+				},
+			},
+			argMsgs:  []proto.Message{msgMap["bool"], msgMap["int"]},
+			projNode: nodeMap["proj1"],
+			projMsg:  msgMap["proj1"].(*mbp.ProjectorDefinition),
+			projectors: map[string]*mbp.ProjectorDefinition{
+				"proj1": msgMap["proj1"].(*mbp.ProjectorDefinition),
+			},
+			want: &env{
+				name: "proj1",
+				args: []proto.Message{msgMap["bool"], msgMap["int"]},
+				argLookup: map[proto.Message]Node{
+					msgMap["bool"]: nodeMap["bool"],
+					msgMap["int"]:  nodeMap["int"],
+				},
+			},
+			wantErrors: false,
+		},
+		{
+			name: "add projected value argument",
+			e: &env{
+				name: "root",
+			},
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["proj1"].ID(): nodeMap["proj1"],
+				},
+			},
+			argMsgs:  []proto.Message{msgMap["projVal2"]},
+			projNode: nodeMap["proj1"],
+			projMsg:  msgMap["proj1"].(*mbp.ProjectorDefinition),
+			projectors: map[string]*mbp.ProjectorDefinition{
+				"proj1":      msgMap["proj1"].(*mbp.ProjectorDefinition),
+				"proj_empty": msgMap["proj_empty"].(*mbp.ProjectorDefinition),
+			},
+			want: &env{
+				name: "proj1",
+				args: []proto.Message{msgMap["projVal2"]},
+				argLookup: map[proto.Message]Node{
+					msgMap["projVal2"]: nodeMap["proj_empty"],
+				},
+			},
+			wantErrors: false,
+		},
+		{
+			name: "no projector",
+			e: &env{
+				name: "root",
+			},
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["proj1"].ID(): nodeMap["proj1"],
+				},
+			},
+			argMsgs:  []proto.Message{msgMap["projVal2"]},
+			projNode: nodeMap["proj1"],
+			projMsg:  msgMap["proj1"].(*mbp.ProjectorDefinition),
+			projectors: map[string]*mbp.ProjectorDefinition{
+				"proj1": msgMap["proj1"].(*mbp.ProjectorDefinition),
+			},
+			want: &env{
+				name: "proj1",
+				args: []proto.Message{msgMap["projVal2"]},
+				argLookup: map[proto.Message]Node{
+					msgMap["projVal2"]: nodeMap["proj_empty"],
+				},
+			},
+			wantErrors: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			e, err := test.graph.addArgLineages(test.e, test.argMsgs, test.projNode, test.projMsg, test.projectors)
+			if test.wantErrors && err == nil {
+				t.Errorf("expected error getting argument lineages")
+			} else if !test.wantErrors && err != nil {
+				t.Errorf("adding argument lineages for %v failed:\n%w", test.argMsgs, err)
+			}
+
+			if !test.wantErrors {
+				if test.want.name != e.name {
+					t.Errorf("expected env named %v, but got %v", test.want.name, e.name)
+				}
+				if len(test.want.args) != len(e.args) {
+					t.Errorf("expected %v arguments, but got %v; %v", len(test.want.args), len(e.args), e.args)
+				}
+				for i, wantMsg := range test.want.args {
+					if !cmp.Equal(wantMsg, e.args[i], protocmp.Transform()) {
+						t.Errorf("expected msg {%v}, but got %v", wantMsg, e.args[i])
 					}
-					if !node.Equals(wantNode) {
-						t.Errorf("expected node %v but got %v", wantNode, node)
+
+					var node Node
+					var ok bool
+					if node, ok = e.argLookup[e.args[i]]; !ok {
+						t.Errorf("expected msg {%v} to be in the argLookup", e.args[i])
 					}
-					for _, wantAncestorID := range test.want.Graph[wantID] {
-						wantAncestor := test.want.Nodes[wantAncestorID]
-						ancestor := g.Nodes[wantAncestorID]
-						if !wantAncestor.Equals(ancestor) {
-							t.Errorf("expected ancestor %v but got %v", wantAncestor, ancestor)
-						}
+
+					if !EqualsIgnoreID(test.want.argLookup[wantMsg], node) {
+						t.Errorf("expected node {%v}, but got {%v}", test.want.argLookup[wantMsg], node)
 					}
 				}
 			}
@@ -460,271 +976,330 @@ func TestNew_Whistler(t *testing.T) {
 	}
 }
 
-func TestDFSgraphBuild(t *testing.T) {
-	setIDfactory(&autoIncFactory{currentID: 0})
-
-	nodeList := [][]Node{
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ConstBoolNode{
-				id:    idFactory.New(),
-				Value: true,
-			},
-		},
-		[]Node{},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ProjectorNode{
-				id:   idFactory.New(),
-				Name: "projector",
-			},
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "y",
-			},
-			&ConstIntNode{
-				id:    idFactory.New(),
-				Value: 5,
-			},
-		},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-			&ProjectorNode{
-				id:   idFactory.New(),
-				Name: "projector",
-			},
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "y",
-			},
-			&ArgumentNode{
-				id:    idFactory.New(),
-				Index: 1,
-				Field: ".x",
-			},
-		},
-		[]Node{
-			&TargetNode{
-				id:   idFactory.New(),
-				Name: "x",
-			},
-		},
-	}
-
+func TestAddNode(t *testing.T) {
+	nodeMap := getNodeMap()
 	tests := []struct {
 		name       string
-		frontier   *dfsBuildStack
-		projectors map[string]*mbp.ProjectorDefinition
+		graph      Graph
+		node       Node
+		descendant Node
+		isArg      bool
+		isNew      bool
 		want       Graph
 		wantErrors bool
 	}{
 		{
-			name: "test constant mapping",
-			frontier: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.FieldMapping{
-							ValueSource: &mbp.ValueSource{
-								Source: &mbp.ValueSource_ConstBool{
-									ConstBool: true,
-								},
-							},
-							Target: &mbp.FieldMapping_TargetField{
-								TargetField: "x",
-							},
-						},
-					},
-				},
+			name: "new no descendant",
+			graph: Graph{
+				Edges: map[IsID][]IsID{},
+				Nodes: map[IsID]Node{},
 			},
+			node:  nodeMap["bool"],
+			isArg: false,
+			isNew: true,
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[0][0].ID(): []IsID{nodeList[0][1].ID()},
-					nodeList[0][1].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["bool"].ID(): []IsID{},
 				},
 				Nodes: map[IsID]Node{
-					nodeList[0][0].ID(): nodeList[0][0],
-					nodeList[0][1].ID(): nodeList[0][1],
+					nodeMap["bool"].ID(): nodeMap["bool"],
 				},
 			},
 			wantErrors: false,
 		},
 		{
-			name:       "test empty mapping",
-			frontier:   &dfsBuildStack{},
+			name: "new ProjectorNdoe no descendant",
+			graph: Graph{
+				Edges:         map[IsID][]IsID{},
+				ArgumentEdges: map[IsID][]IsID{},
+				Nodes:         map[IsID]Node{},
+			},
+			node:  nodeMap["proj1"],
+			isArg: false,
+			isNew: true,
+			want: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["proj1"].ID(): nodeMap["proj1"],
+				},
+			},
+			wantErrors: false,
+		},
+		{
+			name: "new already in graph",
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["bool"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["bool"].ID(): nodeMap["bool"],
+				},
+			},
+			node:  nodeMap["bool"],
+			isArg: false,
+			isNew: true,
+			want: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["bool"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["bool"].ID(): nodeMap["bool"],
+				},
+			},
+			wantErrors: true,
+		},
+		{
+			name: "new with descendant",
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+				},
+			},
+			node:       nodeMap["bool"],
+			descendant: nodeMap["targetX"],
+			isArg:      false,
+			isNew:      true,
+			want: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["bool"].ID()},
+					nodeMap["bool"].ID():    []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["bool"].ID():    nodeMap["bool"],
+				},
+			},
+			wantErrors: false,
+		},
+		{
+			name: "new descendant not in graph",
+			graph: Graph{
+				Edges: map[IsID][]IsID{},
+				Nodes: map[IsID]Node{},
+			},
+			node:       nodeMap["bool"],
+			descendant: nodeMap["targetX"],
+			isArg:      false,
+			isNew:      true,
 			want:       Graph{},
-			wantErrors: false,
+			wantErrors: true,
 		},
 		{
-			name: "test projector",
-			frontier: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.FieldMapping{
-							ValueSource: &mbp.ValueSource{
-								Projector: "projector",
-							},
-							Target: &mbp.FieldMapping_TargetField{
-								TargetField: "x",
-							},
-						},
-					},
-				},
-			},
-			projectors: map[string]*mbp.ProjectorDefinition{
-				"projector": &mbp.ProjectorDefinition{
-					Name: "projector",
-					Mapping: []*mbp.FieldMapping{
-						&mbp.FieldMapping{
-							ValueSource: &mbp.ValueSource{
-								Source: &mbp.ValueSource_ConstInt{
-									ConstInt: 5,
-								},
-							},
-							Target: &mbp.FieldMapping_TargetField{
-								TargetField: "y",
-							},
-						},
-					},
-				},
-			},
-			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[2][0].ID(): []IsID{nodeList[2][1].ID()},
-					nodeList[2][1].ID(): []IsID{nodeList[2][2].ID()},
-					nodeList[2][2].ID(): []IsID{nodeList[2][3].ID()},
-					nodeList[2][3].ID(): []IsID{},
+			name: "old no descendant",
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{},
 				},
 				Nodes: map[IsID]Node{
-					nodeList[2][0].ID(): nodeList[2][0],
-					nodeList[2][1].ID(): nodeList[2][1],
-					nodeList[2][2].ID(): nodeList[2][2],
-					nodeList[2][3].ID(): nodeList[2][3],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
 				},
 			},
-			wantErrors: false,
-		},
-		{
-			name: "test projector arguments",
-			frontier: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.FieldMapping{
-							ValueSource: &mbp.ValueSource{
-								Source: &mbp.ValueSource_ConstBool{
-									ConstBool: true,
-								},
-								AdditionalArg: []*mbp.ValueSource{
-									&mbp.ValueSource{
-										Source: &mbp.ValueSource_ConstFloat{
-											ConstFloat: 1.0,
-										},
-									},
-								},
-								Projector: "projector",
-							},
-							Target: &mbp.FieldMapping_TargetField{
-								TargetField: "x",
-							},
-						},
-					},
-				},
-			},
-			projectors: map[string]*mbp.ProjectorDefinition{
-				"projector": &mbp.ProjectorDefinition{
-					Name: "projector",
-					Mapping: []*mbp.FieldMapping{
-						&mbp.FieldMapping{
-							ValueSource: &mbp.ValueSource{
-								Source: &mbp.ValueSource_FromInput{
-									FromInput: &mbp.ValueSource_InputSource{
-										Arg:   1,
-										Field: ".x",
-									},
-								},
-							},
-							Target: &mbp.FieldMapping_TargetField{
-								TargetField: "y",
-							},
-						},
-					},
-				},
-			},
+			node:  nodeMap["targetX"],
+			isArg: false,
+			isNew: false,
 			want: Graph{
-				Graph: map[IsID][]IsID{
-					nodeList[3][0].ID(): []IsID{nodeList[3][1].ID()},
-					nodeList[3][1].ID(): []IsID{nodeList[3][2].ID()},
-					nodeList[3][2].ID(): []IsID{nodeList[3][3].ID()},
-					nodeList[3][3].ID(): []IsID{},
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{},
 				},
 				Nodes: map[IsID]Node{
-					nodeList[3][0].ID(): nodeList[3][0],
-					nodeList[3][1].ID(): nodeList[3][1],
-					nodeList[3][2].ID(): nodeList[3][2],
-					nodeList[3][3].ID(): nodeList[3][3],
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
 				},
 			},
 			wantErrors: false,
 		},
 		{
-			name: "test no projector",
-			frontier: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.FieldMapping{
-							ValueSource: &mbp.ValueSource{
-								Projector: "projector",
-							},
-							Target: &mbp.FieldMapping_TargetField{
-								TargetField: "x",
-							},
-						},
-					},
+			name: "old descendant",
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{},
+					nodeMap["bool"].ID():    []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["bool"].ID():    nodeMap["bool"],
 				},
 			},
-			projectors: map[string]*mbp.ProjectorDefinition{},
+			node:       nodeMap["bool"],
+			descendant: nodeMap["targetX"],
+			isArg:      false,
+			isNew:      false,
+			want: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["targetX"].ID(): []IsID{nodeMap["bool"].ID()},
+					nodeMap["bool"].ID():    []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["targetX"].ID(): nodeMap["targetX"],
+					nodeMap["bool"].ID():    nodeMap["bool"],
+				},
+			},
+			wantErrors: false,
+		},
+		{
+			name: "old isArg descendant",
+			graph: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+					nodeMap["bool"].ID():  []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["proj1"].ID(): nodeMap["proj1"],
+					nodeMap["bool"].ID():  nodeMap["bool"],
+				},
+			},
+			node:       nodeMap["bool"],
+			descendant: nodeMap["proj1"],
+			isArg:      true,
+			isNew:      false,
+			want: Graph{
+				Edges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{},
+					nodeMap["bool"].ID():  []IsID{},
+				},
+				ArgumentEdges: map[IsID][]IsID{
+					nodeMap["proj1"].ID(): []IsID{nodeMap["bool"].ID()},
+				},
+				Nodes: map[IsID]Node{
+					nodeMap["proj1"].ID(): nodeMap["proj1"],
+					nodeMap["bool"].ID():  nodeMap["bool"],
+				},
+			},
+			wantErrors: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := addNode(test.graph, test.node, test.descendant, test.isArg, test.isNew)
+			graph := test.graph
+			if test.wantErrors && err == nil {
+				t.Errorf("expected errors adding node {%v}", test.node)
+			} else if !test.wantErrors && err != nil {
+				t.Errorf("adding node {%v} failed:\n%w", test.node, err)
+			}
+
+			if !test.wantErrors {
+				if len(test.want.Nodes) != len(graph.Nodes) {
+					t.Errorf("expected %v nodes, but got %v; %v", len(test.want.Nodes), len(graph.Nodes), graph.Nodes)
+				}
+				for _, wantNode := range test.want.Nodes {
+					if _, found := findNodeInMap(wantNode, graph.Nodes); !found {
+						t.Errorf("expected node {%v} to be in the graph, but it was not", wantNode)
+					}
+				}
+				if equal, errStr := compareGraphs(test.want.Edges, graph.Edges, test.want.Nodes, graph.Nodes); !equal {
+					t.Errorf("the graph edges are not as expected:\n%v", errStr)
+				}
+				if equal, errStr := compareGraphs(test.want.ArgumentEdges, graph.ArgumentEdges, test.want.Nodes, graph.Nodes); !equal {
+					t.Errorf("the graph argument edges are not as expected:\n%v", errStr)
+				}
+			}
+		},
+		)
+	}
+}
+
+func TestGetNode(t *testing.T) {
+	msgMap := getMsgMap()
+	tests := []struct {
+		name           string
+		msg            proto.Message
+		descendantNode Node
+		argLookup      map[proto.Message]Node
+		wantErrors     bool
+		want           Node
+		wantNew        bool
+	}{
+		{
+			name:           "test new node",
+			descendantNode: &TargetNode{},
+			msg:            msgMap["bool"],
+			want: &ConstBoolNode{
+				id:    intID(0),
+				Value: true,
+			},
+			argLookup:  map[proto.Message]Node{},
+			wantNew:    true,
+			wantErrors: false,
+		},
+		{
+			name:           "test new with argLookup",
+			descendantNode: &TargetNode{},
+			msg:            msgMap["float"],
+			want: &ConstFloatNode{
+				id:    intID(0),
+				Value: 5.0,
+			},
+			argLookup: map[proto.Message]Node{
+				msgMap["float"]: &ConstFloatNode{
+					id:    intID(0),
+					Value: 5.0,
+				},
+			},
+			wantNew:    true,
+			wantErrors: false,
+		},
+		{
+			name:           "test lookup",
+			descendantNode: &ArgumentNode{},
+			msg:            msgMap["int"],
+			want: &ConstIntNode{
+				id:    intID(0),
+				Value: 0,
+			},
+			argLookup: map[proto.Message]Node{
+				msgMap["int"]: &ConstIntNode{
+					id:    intID(0),
+					Value: 0,
+				},
+			},
+			wantNew:    false,
+			wantErrors: false,
+		},
+		{
+			name:           "test lookup wrong argLookup",
+			descendantNode: &ArgumentNode{},
+			msg:            msgMap["string"],
+			argLookup: map[proto.Message]Node{
+				msgMap["float"]: &ConstStringNode{
+					id:    intID(0),
+					Value: "foo",
+				},
+			},
+			want: &ConstStringNode{
+				id:    intID(0),
+				Value: "foo",
+			},
+			wantNew:    false,
 			wantErrors: true,
 		},
 	}
 
-	setIDfactory(&autoIncFactory{currentID: 0})
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g, err := buildGraphDFS(test.frontier, test.projectors)
+			node, isNew, err := getNode(test.msg, test.descendantNode, test.argLookup)
 			if test.wantErrors && err == nil {
-				t.Errorf("expected error building graph")
+				t.Errorf("expected errors getting node for msg {%v}", test.msg)
 			} else if !test.wantErrors && err != nil {
-				t.Errorf("building graph for %v failed: %w", test.frontier, err)
+				t.Errorf("getting node for msg {%v} failed:\n%w", test.msg, err)
 			}
 
 			if !test.wantErrors {
-				if len(test.want.Nodes) != len(g.Nodes) {
-					t.Errorf("expected %v nodes, but got %v; %v", len(test.want.Nodes), len(g.Nodes), g.Nodes)
+				if test.wantNew != isNew {
+					t.Errorf("wanted to make a new node: %v. getNode made a new node: %v. bools should agree.", test.wantNew, isNew)
 				}
-
-				for wantID, wantNode := range test.want.Nodes {
-					node, ok := g.Nodes[wantID]
-					if !ok {
-						t.Errorf("expected node %v to be in the graph. got %v", wantNode, g.Nodes)
-					}
-					if !node.Equals(wantNode) {
-						t.Errorf("expected node %v but got %v", wantNode, node)
-					}
-					for _, wantAncestorID := range test.want.Graph[wantID] {
-						wantAncestor := test.want.Nodes[wantAncestorID]
-						ancestor := g.Nodes[wantAncestorID]
-						if !wantAncestor.Equals(ancestor) {
-							t.Errorf("expected ancestor %v but got %v", wantAncestor, ancestor)
-						}
-					}
+				if !EqualsIgnoreID(test.want, node) {
+					t.Errorf("wanted node %v but got node %v", test.want, node)
 				}
 			}
 		},
@@ -733,20 +1308,16 @@ func TestDFSgraphBuild(t *testing.T) {
 }
 
 func TestNewNode(t *testing.T) {
-	setIDfactory(mockIDfactory(0))
+	msgMap := getMsgMap()
 	tests := []struct {
 		name       string
 		msg        proto.Message
-		want       Node
 		wantErrors bool
+		want       Node
 	}{
 		{
-			name: "test constant bool",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstBool{
-					ConstBool: true,
-				},
-			},
+			name: "test new constant bool",
+			msg:  msgMap["bool"],
 			want: &ConstBoolNode{
 				id:    intID(0),
 				Value: true,
@@ -754,51 +1325,35 @@ func TestNewNode(t *testing.T) {
 			wantErrors: false,
 		},
 		{
-			name: "test constant int",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstInt{
-					ConstInt: 1,
-				},
-			},
+			name: "test new constant int",
+			msg:  msgMap["int"],
 			want: &ConstIntNode{
 				id:    intID(0),
-				Value: 1,
+				Value: 0,
 			},
 			wantErrors: false,
 		},
 		{
-			name: "test constant float",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstFloat{
-					ConstFloat: 1.0,
-				},
-			},
+			name: "test new constant float",
+			msg:  msgMap["float"],
 			want: &ConstFloatNode{
 				id:    intID(0),
-				Value: 1.0,
+				Value: 5.0,
 			},
 			wantErrors: false,
 		},
 		{
-			name: "test constant string",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstString{
-					ConstString: "str",
-				},
-			},
+			name: "test new constant string",
+			msg:  msgMap["string"],
 			want: &ConstStringNode{
 				id:    intID(0),
-				Value: "str",
+				Value: "foo",
 			},
 			wantErrors: false,
 		},
 		{
-			name: "test field mapping",
-			msg: &mbp.FieldMapping{
-				Target: &mbp.FieldMapping_TargetField{
-					TargetField: "x",
-				},
-			},
+			name: "test new field mapping",
+			msg:  msgMap["mapping"],
 			want: &TargetNode{
 				id:   intID(0),
 				Name: "x",
@@ -806,149 +1361,87 @@ func TestNewNode(t *testing.T) {
 			wantErrors: false,
 		},
 		{
-			name: "test projector",
-			msg: &mbp.ProjectorDefinition{
-				Name:    "projector",
-				Mapping: []*mbp.FieldMapping{},
-			},
+			name: "test new projector",
+			msg:  msgMap["proj1"],
 			want: &ProjectorNode{
 				id:   intID(0),
-				Name: "projector",
+				Name: "proj1",
 			},
 			wantErrors: false,
 		},
 		{
-			name: "test argument",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_FromInput{
-					FromInput: &mbp.ValueSource_InputSource{
-						Arg:   1,
-						Field: ".x",
-					},
-				},
-			},
+			name: "test new argument",
+			msg:  msgMap["arg0"],
 			want: &ArgumentNode{
 				id:    intID(0),
 				Index: 1,
-				Field: ".x",
 			},
 			wantErrors: false,
 		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			node, err := newNode(test.msg)
-
 			if test.wantErrors && err == nil {
-				t.Errorf("expected errors making node %v", test.msg)
+				t.Errorf("expected errors getting node for msg {%v}", test.msg)
 			} else if !test.wantErrors && err != nil {
-				t.Errorf("expected node %v but got error %w", test.want, err)
+				t.Errorf("getting node for msg {%v} failed:\n%w", test.msg, err)
 			}
-			if !test.wantErrors && !test.want.Equals(node) {
-				t.Errorf("expected node %v but got %v", test.want, node)
+
+			if !test.wantErrors {
+				if !EqualsIgnoreID(test.want, node) {
+					t.Errorf("wanted node %v but got node %v", test.want, node)
+				}
 			}
 		},
 		)
 	}
 }
 
-func TestAncestors(t *testing.T) {
+// Test only that the switch delegates correctly
+func TestGetAncestors(t *testing.T) {
+	msgMap := getMsgMap()
 	tests := []struct {
-		name             string
-		msg              proto.Message
-		projectors       map[string]*mbp.ProjectorDefinition
-		want             proto.Message
-		wantNumAncestors int
-		wantErrors       bool
+		name       string
+		msg        proto.Message
+		want       proto.Message
+		wantErrors bool
 	}{
 		{
-			name: "test constant source",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstBool{
-					ConstBool: true,
-				},
-			},
+			name:       "test FieldMapping",
+			msg:        msgMap["mapping"],
+			want:       msgMap["bool"],
+			wantErrors: false,
+		},
+		{
+			name:       "test ValueSource",
+			msg:        msgMap["bool"],
 			want:       nil,
 			wantErrors: false,
 		},
 		{
-			name: "test field mapping",
-			msg: &mbp.FieldMapping{
-				ValueSource: &mbp.ValueSource{
-					Source: &mbp.ValueSource_ConstBool{
-						ConstBool: true,
-					},
-				},
-			},
-			want: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstBool{
-					ConstBool: true,
-				},
-			},
-			wantErrors: false,
-		},
-		{
-			name: "test field mapping error",
-			msg: &mbp.FieldMapping{
-				ValueSource: &mbp.ValueSource{
-					Projector: "no_projector",
-				},
-			},
-			projectors: map[string]*mbp.ProjectorDefinition{},
-			wantErrors: true,
-		},
-		{
-			name: "test projector",
-			msg: &mbp.ProjectorDefinition{
-				Name: "projector",
-				Mapping: []*mbp.FieldMapping{
-					&mbp.FieldMapping{
-						ValueSource: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstBool{
-								ConstBool: true,
-							},
-						},
-						Target: &mbp.FieldMapping_TargetField{
-							TargetField: "x",
-						},
-					},
-				},
-			},
-			want: &mbp.FieldMapping{
-				ValueSource: &mbp.ValueSource{
-					Source: &mbp.ValueSource_ConstBool{
-						ConstBool: true,
-					},
-				},
-				Target: &mbp.FieldMapping_TargetField{
-					TargetField: "x",
-				},
-			},
+			name:       "test ProjectorDefinition",
+			msg:        msgMap["proj1"],
+			want:       msgMap["mapping"],
 			wantErrors: false,
 		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			msgs, err := ancestors(test.msg, test.projectors)
-
+			ancestors, err := getAncestors(nil, test.msg, nil)
 			if test.wantErrors && err == nil {
-				t.Errorf("expected error getting ancestors for %v", test.msg)
+				t.Errorf("expected errors getting ancestors for msg {%v}", test.msg)
 			} else if !test.wantErrors && err != nil {
-				t.Errorf("getting ancestors for %v failed: %w", test.msg, err)
+				t.Errorf("getting ancestors for msg {%v} failed:\n%w", test.msg, err)
 			}
 
 			if !test.wantErrors {
-				if test.want == nil && len(msgs) != 0 {
-					t.Errorf("expected 0 ancestors but got %v: %v", len(msgs), msgs)
-				}
-				if test.want != nil {
-					if len(msgs) != 1 {
-						t.Errorf("expected 1 ancestor but got %v: %v", len(msgs), msgs)
-					} else if cmp.Diff(test.want, msgs[0], protocmp.Transform()) != "" {
-						t.Errorf("expected ancestor %v but got %v", test.want, msgs[0])
-					}
+				if test.want == nil && len(ancestors) != 0 {
+					t.Errorf("expected zero ancestors, but got %v", ancestors)
+				} else if test.want != nil && len(ancestors) == 0 {
+					t.Errorf("expected ancestor %v, but got none", test.want)
+				} else if test.want != nil && !cmp.Equal(test.want, ancestors[0], protocmp.Transform()) {
+					t.Errorf("expected msg %v, but got %v", test.want, ancestors[0])
 				}
 			}
 		},
@@ -957,6 +1450,7 @@ func TestAncestors(t *testing.T) {
 }
 
 func TestFieldMappingAncestors(t *testing.T) {
+	msgMap := getMsgMap()
 	tests := []struct {
 		name       string
 		msg        *mbp.FieldMapping
@@ -965,99 +1459,50 @@ func TestFieldMappingAncestors(t *testing.T) {
 		wantErrors bool
 	}{
 		{
-			name: "test constant source",
-			msg: &mbp.FieldMapping{
-				ValueSource: &mbp.ValueSource{
-					Source: &mbp.ValueSource_ConstBool{
-						ConstBool: true,
-					},
-				},
-			},
-			want: []proto.Message{
-				&mbp.ValueSource{
-					Source: &mbp.ValueSource_ConstBool{
-						ConstBool: true,
-					},
-				},
-			},
-			wantErrors: false,
-		},
-		{
-			name:       "test empty mapping",
-			msg:        &mbp.FieldMapping{},
-			want:       []proto.Message{},
+			name:       "test constant source",
+			msg:        msgMap["mapping"].(*mbp.FieldMapping),
+			want:       []proto.Message{msgMap["bool"]},
 			wantErrors: false,
 		},
 		{
 			name: "test projector source",
-			msg: &mbp.FieldMapping{
-				ValueSource: &mbp.ValueSource{
-					Projector: "projector",
-				},
-			},
+			msg:  msgMap["mapping_proj1"].(*mbp.FieldMapping),
 			projectors: map[string]*mbp.ProjectorDefinition{
-				"projector": &mbp.ProjectorDefinition{
-					Mapping: []*mbp.FieldMapping{&mbp.FieldMapping{
-						ValueSource: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstBool{
-								ConstBool: true,
-							},
-						},
-					}},
-				},
+				"proj1": msgMap["proj1"].(*mbp.ProjectorDefinition),
 			},
-			want: []proto.Message{
-				&mbp.ProjectorDefinition{
-					Mapping: []*mbp.FieldMapping{&mbp.FieldMapping{
-						ValueSource: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstBool{
-								ConstBool: true,
-							},
-						},
-					}},
-				},
-			},
+			want:       []proto.Message{msgMap["proj1"]},
 			wantErrors: false,
 		},
 		{
-			name: "test invalid projector source",
-			msg: &mbp.FieldMapping{
-				ValueSource: &mbp.ValueSource{
-					Projector: "no_projector",
-				},
-			},
-			projectors: map[string]*mbp.ProjectorDefinition{
-				"projector": &mbp.ProjectorDefinition{
-					Mapping: []*mbp.FieldMapping{&mbp.FieldMapping{
-						ValueSource: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstBool{
-								ConstBool: true,
-							},
-						},
-					}},
-				},
-			},
+			name:       "test missing projector",
+			msg:        msgMap["mapping_proj1"].(*mbp.FieldMapping),
+			projectors: map[string]*mbp.ProjectorDefinition{},
+			want:       nil,
 			wantErrors: true,
 		},
+		{
+			name:       "nil source",
+			msg:        msgMap["mapping_nil"].(*mbp.FieldMapping),
+			want:       []proto.Message{},
+			wantErrors: false,
+		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			msgs, err := fieldMappingAncestors(test.msg, test.projectors)
-
+			ancestors, err := fieldMappingAncestors(test.msg, test.projectors)
 			if test.wantErrors && err == nil {
-				t.Errorf("expected error getting ancestors for %v", test.msg)
+				t.Errorf("expected errors getting ancestors for msg {%v}", test.msg)
 			} else if !test.wantErrors && err != nil {
-				t.Errorf("getting ancestors for %v failed: %w", test.msg, err)
+				t.Errorf("getting ancestors for msg {%v} failed:\n%w", test.msg, err)
 			}
 
 			if !test.wantErrors {
-				if len(msgs) != len(test.want) {
-					t.Fatalf("expected %v ancestors but got %v: %v", len(test.want), len(msgs), msgs)
+				if len(test.want) != len(ancestors) {
+					t.Errorf("expected %v ancestors, but got %v: %v", len(test.want), len(ancestors), ancestors)
 				}
-				for i := range msgs {
-					if cmp.Diff(msgs[i], test.want[i], protocmp.Transform()) != "" {
-						t.Errorf("expected ancestor %v but got %v", test.want[i], msgs[i])
+				for i := range test.want {
+					if !cmp.Equal(test.want[i], ancestors[i], protocmp.Transform()) {
+						t.Errorf("expected msg %v, but got %v", test.want[i], ancestors[i])
 					}
 				}
 			}
@@ -1067,62 +1512,107 @@ func TestFieldMappingAncestors(t *testing.T) {
 }
 
 func TestValueSourceAncestors(t *testing.T) {
+	msgMap := getMsgMap()
 	tests := []struct {
 		name       string
+		e          *env
 		msg        *mbp.ValueSource
 		want       []proto.Message
 		wantErrors bool
 	}{
 		{
-			name: "test ConstBool",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstBool{
-					ConstBool: true,
-				},
-			},
+			name:       "test bool",
+			msg:        msgMap["bool"].(*mbp.ValueSource),
 			want:       []proto.Message{},
 			wantErrors: false,
 		},
 		{
-			name: "test ConstInt",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstInt{
-					ConstInt: 1,
-				},
-			},
+			name:       "test float",
+			msg:        msgMap["float"].(*mbp.ValueSource),
 			want:       []proto.Message{},
 			wantErrors: false,
 		},
 		{
-			name: "test ConstBool",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstFloat{
-					ConstFloat: 0.0,
-				},
-			},
+			name:       "test int",
+			msg:        msgMap["int"].(*mbp.ValueSource),
 			want:       []proto.Message{},
 			wantErrors: false,
 		},
 		{
-			name: "test ConstBool",
-			msg: &mbp.ValueSource{
-				Source: &mbp.ValueSource_ConstString{
-					ConstString: "str",
-				},
-			},
+			name:       "test string",
+			msg:        msgMap["string"].(*mbp.ValueSource),
 			want:       []proto.Message{},
 			wantErrors: false,
+		},
+		{
+			name: "test Argument 0",
+			e: &env{
+				name:   "proj1",
+				parent: nil,
+				args:   []proto.Message{msgMap["bool"]},
+			},
+			msg:        msgMap["arg0"].(*mbp.ValueSource),
+			want:       []proto.Message{msgMap["bool"]},
+			wantErrors: false,
+		},
+		{
+			name: "test Argument 1",
+			e: &env{
+				name:   "proj1",
+				parent: nil,
+				args:   []proto.Message{msgMap["int"], msgMap["bool"]},
+			},
+			msg:        msgMap["arg1"].(*mbp.ValueSource),
+			want:       []proto.Message{msgMap["bool"]},
+			wantErrors: false,
+		},
+		{
+			name: "test Argument too high",
+			e: &env{
+				name:   "proj1",
+				parent: nil,
+				args:   []proto.Message{msgMap["int"]},
+			},
+			msg:        msgMap["arg1"].(*mbp.ValueSource),
+			want:       nil,
+			wantErrors: true,
+		},
+		{
+			name: "test Argument too low",
+			e: &env{
+				name:   "proj1",
+				parent: nil,
+				args:   []proto.Message{msgMap["int"]},
+			},
+			msg: &mbp.ValueSource{
+				Source: &mbp.ValueSource_FromInput{
+					FromInput: &mbp.ValueSource_InputSource{
+						Arg: 0,
+					},
+				},
+			},
+			want:       nil,
+			wantErrors: true,
 		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			msgs, err := valueSourceAncestors(test.msg)
-			if !test.wantErrors && err != nil {
-				t.Errorf("getting valueSource ancestors failed; %w", err)
+			ancestors, err := valueSourceAncestors(test.e, test.msg)
+			if test.wantErrors && err == nil {
+				t.Errorf("expected errors getting ancestors for msg {%v}", test.msg)
+			} else if !test.wantErrors && err != nil {
+				t.Errorf("getting ancestors for msg {%v} failed:\n%w", test.msg, err)
 			}
-			if len(msgs) != len(test.want) {
-				t.Fatalf("expected %v ancestors, but got %v", len(msgs), len(test.want))
+
+			if !test.wantErrors {
+				if len(test.want) != len(ancestors) {
+					t.Errorf("expected %v ancestors, but got %v: %v", len(test.want), len(ancestors), ancestors)
+				}
+				for i := range test.want {
+					if !cmp.Equal(test.want[i], ancestors[i], protocmp.Transform()) {
+						t.Errorf("expected msg %v, but got %v", test.want[i], ancestors[i])
+					}
+				}
 			}
 		},
 		)
@@ -1130,89 +1620,32 @@ func TestValueSourceAncestors(t *testing.T) {
 }
 
 func TestProjectorAncestors(t *testing.T) {
+	msgMap := getMsgMap()
 	tests := []struct {
 		name string
 		msg  *mbp.ProjectorDefinition
-		want []*mbp.FieldMapping
+		want []proto.Message
 	}{
 		{
-			name: "test with mappings",
-			msg: &mbp.ProjectorDefinition{
-				Name: "projector",
-				Mapping: []*mbp.FieldMapping{
-					&mbp.FieldMapping{
-						ValueSource: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstBool{
-								ConstBool: true,
-							},
-						},
-						Target: &mbp.FieldMapping_TargetField{
-							TargetField: "x",
-						},
-					},
-					&mbp.FieldMapping{
-						ValueSource: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 5,
-							},
-						},
-						Target: &mbp.FieldMapping_TargetField{
-							TargetField: "y",
-						},
-					},
-				},
-			},
-			want: []*mbp.FieldMapping{
-				&mbp.FieldMapping{
-					ValueSource: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstBool{
-							ConstBool: true,
-						},
-					},
-					Target: &mbp.FieldMapping_TargetField{
-						TargetField: "x",
-					},
-				},
-				&mbp.FieldMapping{
-					ValueSource: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstInt{
-							ConstInt: 5,
-						},
-					},
-					Target: &mbp.FieldMapping_TargetField{
-						TargetField: "y",
-					},
-				},
-			},
+			name: "test with ancestors",
+			msg:  msgMap["proj1"].(*mbp.ProjectorDefinition),
+			want: []proto.Message{msgMap["mapping"]},
 		},
 		{
-			name: "test without mappings",
-			msg: &mbp.ProjectorDefinition{
-				Name:    "projector",
-				Mapping: []*mbp.FieldMapping{},
-			},
-			want: []*mbp.FieldMapping{},
+			name: "test no mappings",
+			msg:  msgMap["proj_empty"].(*mbp.ProjectorDefinition),
+			want: []proto.Message{},
 		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			msgs := projectorAncestors(test.msg)
-			if len(msgs) != len(test.want) {
-				t.Fatalf("expected %v ancestors, but got %v", len(msgs), len(test.want))
+			ancestors := projectorAncestors(test.msg)
+			if len(test.want) != len(ancestors) {
+				t.Errorf("expected %v ancestors, but got %v: %v", len(test.want), len(ancestors), ancestors)
 			}
-			for i := range msgs {
-				wantMapping, msg := test.want[i], msgs[i]
-				var mapping *mbp.FieldMapping
-				var ok bool
-				if mapping, ok = msg.(*mbp.FieldMapping); !ok {
-					t.Fatalf("expected ancestor of type FieldMapping, but got %v", msg)
-				}
-				if cmp.Diff(wantMapping.GetValueSource(), mapping.GetValueSource(), protocmp.Transform()) != "" {
-					t.Fatalf("expected ValueSource %v but got %v", wantMapping.GetValueSource(), mapping.GetValueSource())
-				}
-				if wantMapping.GetTargetField() != mapping.GetTargetField() {
-					t.Errorf("expected Target %v but got %v", wantMapping.GetTarget(), mapping.GetTarget())
+			for i := range test.want {
+				if !cmp.Equal(test.want[i], ancestors[i], protocmp.Transform()) {
+					t.Errorf("expected msg %v, but got %v", test.want[i], ancestors[i])
 				}
 			}
 		},
@@ -1220,283 +1653,65 @@ func TestProjectorAncestors(t *testing.T) {
 	}
 }
 
-func TestDFSbuildStack_Push(t *testing.T) {
+func TestProjectorArgs(t *testing.T) {
+	msgMap := getMsgMap()
 	tests := []struct {
-		name string
-		s    *dfsBuildStack
-		mcs  []msgContext
-		want *dfsBuildStack
+		name       string
+		msg        proto.Message
+		want       []proto.Message
+		wantErrors bool
 	}{
 		{
-			name: "push one to empty",
-			s:    &dfsBuildStack{},
-			mcs: []msgContext{
-				msgContext{
-					msg: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstBool{
-							ConstBool: true,
-						},
-					},
-				},
-			},
-			want: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstBool{
-								ConstBool: true,
-							},
-						},
-					},
-				},
-			},
+			name:       "test no args fieldmapping",
+			msg:        msgMap["mapping_proj1"],
+			want:       []proto.Message{},
+			wantErrors: false,
 		},
 		{
-			name: "push one to nonempty",
-			s: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 1,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 2,
-							},
-						},
-					},
-				},
-			},
-			mcs: []msgContext{
-				msgContext{
-					msg: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstInt{
-							ConstInt: 3,
-						},
-					},
-				},
-			},
-			want: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 1,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 2,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 3,
-							},
-						},
-					},
-				},
-			},
+			name:       "test args fieldmapping",
+			msg:        msgMap["mapping_proj2"],
+			want:       []proto.Message{msgMap["source_args"], msgMap["int"]},
+			wantErrors: false,
 		},
 		{
-			name: "push many",
-			s:    &dfsBuildStack{},
-			mcs: []msgContext{
-				msgContext{
-					msg: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstInt{
-							ConstInt: 1,
-						},
-					},
-				},
-				msgContext{
-					msg: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstInt{
-							ConstInt: 2,
-						},
-					},
-				},
-			},
-			want: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 1,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 2,
-							},
-						},
-					},
-				},
-			},
+			name:       "test no args valuesource",
+			msg:        msgMap["source_noargs"],
+			want:       []proto.Message{},
+			wantErrors: false,
+		},
+		{
+			name:       "test args valuesource",
+			msg:        msgMap["source_args"],
+			want:       []proto.Message{msgMap["source_args"], msgMap["int"]},
+			wantErrors: false,
+		},
+		{
+			name:       "test wrong message type",
+			msg:        msgMap["arg0"],
+			wantErrors: true,
+		},
+		{
+			name:       "test no projector",
+			msg:        msgMap["bool"],
+			wantErrors: true,
 		},
 	}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			for _, mc := range test.mcs {
-				test.s.push(mc)
+			ancestors, err := projectorArgs(test.msg)
+			if test.wantErrors && err == nil {
+				t.Errorf("expected errors getting args for msg {%v}", test.msg)
+			} else if !test.wantErrors && err != nil {
+				t.Errorf("getting args for msg {%v} failed:\n%w", test.msg, err)
 			}
-			if test.s.len() != test.want.len() {
-				t.Errorf("expected length %v, but got length %v", test.s.len(), test.want.len())
-			}
-			for i := range test.s.stack {
-				if cmp.Diff(test.s.stack[i].msg, test.want.stack[i].msg, protocmp.Transform()) != "" {
-					t.Errorf("expected %v but got %v", test.want.stack[i].msg, test.s.stack[i].msg)
-				}
-			}
-		},
-		)
-	}
-}
 
-func TestDFSbuildStack_Pop(t *testing.T) {
-	tests := []struct {
-		name        string
-		s           *dfsBuildStack
-		wantStack   *dfsBuildStack
-		wantPopped  []msgContext
-		wantSuccess bool
-	}{
-		{
-			name:        "pop empty",
-			s:           &dfsBuildStack{},
-			wantSuccess: false,
-		},
-		{
-			name: "pop one-stack",
-			s: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 1,
-							},
-						},
-					},
-				},
-			},
-			wantPopped: []msgContext{
-				msgContext{
-					msg: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstInt{
-							ConstInt: 1,
-						},
-					},
-				},
-			},
-			wantStack:   &dfsBuildStack{stack: []msgContext{}},
-			wantSuccess: true,
-		},
-		{
-			name: "pop many from many",
-			s: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 1,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 2,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 3,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 4,
-							},
-						},
-					},
-				},
-			},
-			wantPopped: []msgContext{
-				msgContext{
-					msg: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstInt{
-							ConstInt: 4,
-						},
-					},
-				},
-				msgContext{
-					msg: &mbp.ValueSource{
-						Source: &mbp.ValueSource_ConstInt{
-							ConstInt: 3,
-						},
-					},
-				},
-			},
-			wantStack: &dfsBuildStack{
-				stack: []msgContext{
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 1,
-							},
-						},
-					},
-					msgContext{
-						msg: &mbp.ValueSource{
-							Source: &mbp.ValueSource_ConstInt{
-								ConstInt: 2,
-							},
-						},
-					},
-				},
-			},
-			wantSuccess: true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			if !test.wantSuccess {
-				if _, ok := test.s.pop(); ok {
-					t.Errorf("expected popping on stack %v to fail", test.s)
+			if !test.wantErrors {
+				if len(test.want) != len(ancestors) {
+					t.Errorf("expected %v args, but got %v: %v", len(test.want), len(ancestors), ancestors)
 				}
-			} else {
-				for _, mc := range test.wantPopped {
-					poppedMC, ok := test.s.pop()
-					if !ok {
-						t.Errorf("expected to pop %v, but popping failed", mc)
-					}
-					if cmp.Diff(mc.msg, poppedMC.msg, protocmp.Transform()) != "" {
-						t.Errorf("expected msg %v but got msg %v", mc.msg, poppedMC.msg)
-					}
-				}
-				if test.s.len() != test.wantStack.len() {
-					t.Errorf("expected %v messages after popping, but got %v", test.wantStack.len(), test.s.len())
-				}
-				for i, wantMC := range test.wantStack.stack {
-					msg := test.s.stack[i].msg
-					if cmp.Diff(msg, wantMC.msg, protocmp.Transform()) != "" {
-						t.Errorf("expected msg %v in stack, but got %v", wantMC.msg, msg)
+				for i := range test.want {
+					if !cmp.Equal(test.want[i], ancestors[i], protocmp.Transform()) {
+						t.Errorf("expected msg %v, but got %v", test.want[i], ancestors[i])
 					}
 				}
 			}
