@@ -42,12 +42,12 @@ func main() {
 	}
 
 	if mpc, err = transpiler.Transpile(string(fileutil.MustRead(*mappingFile, "mapping"))); err != nil {
-		log.Fatalf("Transpiling whistle failed. %v", err)
+		log.Fatalf("Transpiling whistle failed:\n%v", err)
 	}
 
 	g, err := graph.New(mpc)
 	if err != nil {
-		log.Fatalf("Graph construction failed with error;\n\t%v", err)
+		log.Fatalf("Graph construction failed:\n%v", err)
 	}
 	fmt.Println(g)
 }
