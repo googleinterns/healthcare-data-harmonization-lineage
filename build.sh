@@ -19,5 +19,15 @@ if [[ -z "$1" ]]; then
     echo "Usage: ./build [path/to/healthcare-data-harmonization]";
 else
     ./go_mod_edits.sh "$1"
+
+    export GOPATH=$(go env GOPATH)
+    export PATH=$GOPATH/bin:$PATH
+
+    # generate proto buf files
+    go get -u google.golang.org/protobuf/cmd/protoc-gen-go@v1.25.0
+    protoc --go_out=paths=source_relative:. ./graph/proto/graph.proto;
+
     go build
+    go test
+    go test ./graph
 fi

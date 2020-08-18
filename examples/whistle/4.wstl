@@ -1,0 +1,5 @@
+a: {
+   b: "false value"
+}
+
+x: dest a.b
