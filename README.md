@@ -22,6 +22,7 @@ The [whistle mapping language](https://github.com/GoogleCloudPlatform/healthcare
 ![Alt text](https://g.gravizo.com/source/custom_mark0?https%3A%2F%2Fraw.githubusercontent.com%2Fgoogleinterns%2Fhealthcare-data-harmonization-lineage%2Fprotobuf%2FREADME.md)
 <details>
   <summary></summary>
+  custom_mark0
   digraph "" {
 	graph [bb="0,0,484.47,448.4"];
 	node [label="\N"];
@@ -111,6 +112,7 @@ The [whistle mapping language](https://github.com/GoogleCloudPlatform/healthcare
 		width=1.6797];
 	18 -> 23	 [pos="e,400.65,212.32 318.56,271.11 338.06,257.14 369.07,234.94 392.42,218.21"];
 }
+custom_mark0
 </details>
 
 ## Installation
