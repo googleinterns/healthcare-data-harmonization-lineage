@@ -23,7 +23,7 @@ The [whistle mapping language](https://github.com/GoogleCloudPlatform/healthcare
 <details>
   <summary></summary>
   custom_mark0
-  digraph "" {
+  digraph G {
 	graph [bb="0,0,484.47,448.4"];
 	node [label="\N"];
 	19	 [height=0.5,
