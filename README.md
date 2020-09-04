@@ -19,43 +19,7 @@ The [whistle mapping language](https://github.com/GoogleCloudPlatform/healthcare
     
 ### example lineage graph:
 
-![Alt text](https://g.gravizo.com/source/custom_mark0?https%3A%2F%2Fraw.githubusercontent.com%2Fgoogleinterns%2Fhealthcare-data-harmonization-lineage%2Fprotobuf%2FREADME.md)
-<details>
-  <summary></summary>
-  custom_mark0
-digraph G {
-	graph [bb="0,0,226,108"];
-	node [label="\N"];
-	4	 [height=0.5,
-		label=C,
-		pos="27,90",
-		width=0.75];
-	5	 [height=0.5,
-		label=true,
-		pos="27,18",
-		width=0.75];
-	4 -> 5	 [pos="e,27,36.413 27,71.831 27,64.131 27,54.974 27,46.417"];
-	0	 [height=0.5,
-		label=A,
-		pos="113,90",
-		width=0.75];
-	1	 [height=0.5,
-		label="\"string\"",
-		pos="113,18",
-		width=1.1364];
-	0 -> 1	 [pos="e,113,36.413 113,71.831 113,64.131 113,54.974 113,46.417"];
-	2	 [height=0.5,
-		label=B,
-		pos="199,90",
-		width=0.75];
-	3	 [height=0.5,
-		label=3,
-		pos="199,18",
-		width=0.75];
-	2 -> 3	 [pos="e,199,36.413 199,71.831 199,64.131 199,54.974 199,46.417"];
-}
-custom_mark0
-</details>
+![rendered lineage graph](https://raw.githubusercontent.com/googleinterns/healthcare-data-harmonization-lineage/protobuf/examples/png/3.png)
 
 ## Installation
 
