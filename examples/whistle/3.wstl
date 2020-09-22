@@ -1,0 +1,9 @@
+x: foo()
+
+def foo() {
+    if $Eq(0, 5) {
+       y: "true value"
+    } else {
+       y: "false value"
+    }
+}

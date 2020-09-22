@@ -21,7 +21,7 @@
 readonly ABS_PATH="$1"
 
 go mod edit -replace github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_engine="${ABS_PATH}"/mapping_engine
-go mod edit -replace github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_language/transpiler="${ABS_PATH}"/mapping_language/transpiler
+go mod edit -replace github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_language="${ABS_PATH}"/mapping_language
 go mod edit -replace github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_engine/proto="${ABS_PATH}"/mapping_engine/proto
 go mod edit -replace github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_engine/util="${ABS_PATH}"/mapping_engine/util
 go mod edit -replace github.com/GoogleCloudPlatform/healthcare-data-harmonization/mapping_engine/transform="${ABS_PATH}"/mapping_engine/transform

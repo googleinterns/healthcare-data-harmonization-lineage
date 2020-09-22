@@ -1,0 +1,5 @@
+A: foo("I'm a projector arg :)")
+
+def foo(arg) {
+    x: arg
+}

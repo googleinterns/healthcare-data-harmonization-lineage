@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package googleinterns.healthcaredataharmonizationlineage.graph.proto;
+
+option go_package = "github.com/googleinterns/healthcare-data-harmonization-lineage/graph/proto";
+
+message Graph {
+	map<int32, EdgeList> edges = 1; // Edges
+	map<int32, EdgeList> argument_edges = 2; // ArgumentEdges
+	map<int32, EdgeList> condition_edges = 3; // ConditionEdges
+	map<string, EdgeList> root_and_out_targets = 4; // RootAndOutTargets; this could be removed and reconstructed
+	map<int32, Node> nodes = 5; // Nodes
+}
+
+message EdgeList {
+	repeated int32 edges = 1;
+}
+
+message Node {
+	oneof node {
+	      TargetNode target_node = 1;
+	      ConstBoolNode const_bool_node = 2;
+	      ConstStringNode const_string_node = 3;
+	      ConstIntNode const_int_node = 4;
+	      ConstFloatNode const_float_node = 5;
+	      ProjectorNode projector_node = 6;
+	      ArgumentNode argument_node = 7;
+	      RootNode root_node = 8;
+	      ArrayNode array_node = 9;
+	      ArrayIndexNode array_index_node = 10;
+	      JsonNode json_node = 11;
+	}
+}
+
+message FileMetaData {
+	string file_name = 1;
+	int32 line_start = 2;
+	int32 line_end = 3;
+	int32 char_start = 4;
+	int32 char_end = 5;
+}
+
+message TargetNode {
+	int32 id = 1;
+	string name = 2;
+	string context = 3;
+	bool is_variable = 4;
+	bool is_overwrite = 5;
+	bool is_root = 6;
+	bool is_out = 7;
+	FileMetaData file_data = 8;
+}
+
+message ConstBoolNode {
+	int32 id = 1;
+	bool value = 2;
+	string context = 3;
+	FileMetaData file_data = 4;
+}
+
+message ConstStringNode {
+	int32 id = 1;
+	string value = 2;
+	string context = 3;
+	FileMetaData file_data = 4;
+}
+
+message ConstIntNode {
+	int32 id = 1;
+	int32 value = 2;
+	string context = 3;
+	FileMetaData file_data = 4;
+}
+
+message ConstFloatNode {
+	int32 id = 1;
+	float value = 2;
+	string context = 3;
+	FileMetaData file_data = 4;
+}
+
+message ProjectorNode {
+	 int32 id = 1;
+	 string name = 2;
+	 bool is_builtin = 3;
+	 string context = 4;
+	 FileMetaData file_data = 5;
+}
+
+message ArgumentNode {
+	 int32 id = 1;
+	 int32 index = 2;
+	 string field = 3;
+	 string context = 4;
+	 FileMetaData file_data = 5;
+}
+
+message RootNode {
+	int32 id = 1;
+	string field = 2;
+	string context = 3;
+	FileMetaData file_data = 4;
+}
+
+message ArrayNode {
+	int32 id = 1;
+	string name = 2;
+	string context = 3;
+}
+
+message ArrayIndexNode {
+	int32 id = 1;
+	string name = 2;
+	string context = 3;
+}
+
+message JsonNode {
+	int32 id = 1;
+	string name = 2;
+	FileMetaData file_data = 3;
+}
